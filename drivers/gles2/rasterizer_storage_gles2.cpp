@@ -6096,7 +6096,9 @@ void RasterizerStorageGLES2::initialize() {
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glDeleteTextures(1, &depth);
 
+#ifndef JAVASCRIPT_ENABLED
 		if (status != GL_FRAMEBUFFER_COMPLETE) {
+#endif
 			// If it fails, test to see if it supports a framebuffer texture using UNSIGNED_SHORT
 			// This is needed because many OSX devices don't support either UNSIGNED_INT or UNSIGNED_SHORT
 #ifdef GLES_OVER_GL
@@ -6105,6 +6107,11 @@ void RasterizerStorageGLES2::initialize() {
 			// OES_depth_texture extension only specifies GL_DEPTH_COMPONENT.
 			config.depth_internalformat = GL_DEPTH_COMPONENT;
 #endif
+
+#ifdef JAVASCRIPT_ENABLED
+			config.depth_internalformat = GL_DEPTH_COMPONENT16;
+#endif
+
 			config.depth_type = GL_UNSIGNED_SHORT;
 
 			glGenFramebuffers(1, &fbo);
@@ -6133,7 +6140,9 @@ void RasterizerStorageGLES2::initialize() {
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glDeleteTextures(1, &depth);
 		}
+#ifndef JAVASCRIPT_ENABLED
 	}
+#endif
 
 	//picky requirements for these
 	config.support_shadow_cubemaps = config.support_depth_texture && config.support_write_depth && config.support_depth_cubemaps;
