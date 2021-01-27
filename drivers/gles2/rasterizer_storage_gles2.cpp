@@ -115,6 +115,12 @@ PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT
 #define GL_MAX_SAMPLES 0x8D57
 #endif //!GLES_OVER_GL
 
+#ifdef JAVASCRIPT_ENABLED
+#define GL_TEXDEPTH_FMT GL_DEPTH_COMPONENT
+#else
+#define GL_TEXDEPTH_FMT config.depth_internalformat
+#endif
+
 void RasterizerStorageGLES2::bind_quad_array() const {
 	glBindBuffer(GL_ARRAY_BUFFER, resources.quadie);
 	glVertexAttribPointer(VS::ARRAY_VERTEX, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, 0);
@@ -4781,7 +4787,7 @@ void RasterizerStorageGLES2::_render_target_allocate(RenderTarget *rt) {
 
 			glGenTextures(1, &rt->depth);
 			glBindTexture(GL_TEXTURE_2D, rt->depth);
-			glTexImage2D(GL_TEXTURE_2D, 0, config.depth_internalformat, rt->width, rt->height, 0, GL_DEPTH_COMPONENT, config.depth_type, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_TEXDEPTH_FMT, rt->width, rt->height, 0, GL_DEPTH_COMPONENT, config.depth_type, NULL);
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -5970,6 +5976,10 @@ void RasterizerStorageGLES2::initialize() {
 	config.depth_internalformat = GL_DEPTH_COMPONENT;
 	config.depth_type = GL_UNSIGNED_INT;
 
+#ifdef JAVASCRIPT_ENABLED
+	config.depth_internalformat = GL_DEPTH_COMPONENT16;
+#endif
+
 #ifdef GLES_OVER_GL
 	config.float_texture_supported = true;
 	config.s3tc_supported = true;
@@ -6080,7 +6090,7 @@ void RasterizerStorageGLES2::initialize() {
 		GLuint depth;
 		glGenTextures(1, &depth);
 		glBindTexture(GL_TEXTURE_2D, depth);
-		glTexImage2D(GL_TEXTURE_2D, 0, config.depth_internalformat, 32, 32, 0, GL_DEPTH_COMPONENT, config.depth_type, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_TEXDEPTH_FMT, 32, 32, 0, GL_DEPTH_COMPONENT, config.depth_type, NULL);
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -6112,7 +6122,7 @@ void RasterizerStorageGLES2::initialize() {
 
 			glGenTextures(1, &depth);
 			glBindTexture(GL_TEXTURE_2D, depth);
-			glTexImage2D(GL_TEXTURE_2D, 0, config.depth_internalformat, 32, 32, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_TEXDEPTH_FMT, 32, 32, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, NULL);
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);

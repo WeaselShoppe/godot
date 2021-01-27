@@ -53,6 +53,12 @@
 #endif
 #endif
 
+#ifdef JAVASCRIPT_ENABLED
+#define GL_TEXDEPTH_FMT GL_DEPTH_COMPONENT
+#else
+#define GL_TEXDEPTH_FMT storage->config.depth_internalformat
+#endif
+
 static const GLenum _cube_side_enum[6] = {
 
 	GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
@@ -147,7 +153,7 @@ void RasterizerSceneGLES2::shadow_atlas_set_size(RID p_atlas, int p_size) {
 			//just depth texture
 			glGenTextures(1, &shadow_atlas->depth);
 			glBindTexture(GL_TEXTURE_2D, shadow_atlas->depth);
-			glTexImage2D(GL_TEXTURE_2D, 0, storage->config.depth_internalformat, shadow_atlas->size, shadow_atlas->size, 0, GL_DEPTH_COMPONENT, storage->config.depth_type, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_TEXDEPTH_FMT, shadow_atlas->size, shadow_atlas->size, 0, GL_DEPTH_COMPONENT, storage->config.depth_type, NULL);
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -3983,7 +3989,7 @@ void RasterizerSceneGLES2::initialize() {
 
 			for (int i = 0; i < 6; i++) {
 
-				glTexImage2D(_cube_side_enum[i], 0, storage->config.depth_internalformat, cube_size, cube_size, 0, GL_DEPTH_COMPONENT, storage->config.depth_type, NULL);
+				glTexImage2D(_cube_side_enum[i], 0, GL_TEXDEPTH_FMT, cube_size, cube_size, 0, GL_DEPTH_COMPONENT, storage->config.depth_type, NULL);
 			}
 
 			glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -4034,7 +4040,7 @@ void RasterizerSceneGLES2::initialize() {
 			glGenTextures(1, &directional_shadow.depth);
 			glBindTexture(GL_TEXTURE_2D, directional_shadow.depth);
 
-			glTexImage2D(GL_TEXTURE_2D, 0, storage->config.depth_internalformat, directional_shadow.size, directional_shadow.size, 0, GL_DEPTH_COMPONENT, storage->config.depth_type, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_TEXDEPTH_FMT, directional_shadow.size, directional_shadow.size, 0, GL_DEPTH_COMPONENT, storage->config.depth_type, NULL);
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
