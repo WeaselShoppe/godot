@@ -125,6 +125,19 @@ public:
 		MODE_KINEMATIC,
 	};
 
+	struct Collision {
+		Vector3 collision;
+		Vector3 normal;
+		Vector3 collider_vel;
+		ObjectID collider;
+		RID collider_rid;
+		int collider_shape;
+		Variant collider_metadata;
+		Vector3 remainder;
+		Vector3 travel;
+		int local_shape;
+	};
+
 protected:
 	bool can_sleep;
 	PhysicsDirectBodyState *state;
@@ -277,6 +290,33 @@ private:
 };
 
 VARIANT_ENUM_CAST(RigidBody::Mode);
+
+class RigidBodyKinematicCollision : public Reference {
+
+	GDCLASS(RigidBodyKinematicCollision, Reference);
+
+	RigidBody *owner;
+	friend class RigidBody;
+	RigidBody::Collision collision;
+
+protected:
+	static void _bind_methods();
+
+public:
+	Vector3 get_position() const;
+	Vector3 get_normal() const;
+	Vector3 get_travel() const;
+	Vector3 get_remainder() const;
+	Object *get_local_shape() const;
+	Object *get_collider() const;
+	ObjectID get_collider_id() const;
+	Object *get_collider_shape() const;
+	int get_collider_shape_index() const;
+	Vector3 get_collider_velocity() const;
+	Variant get_collider_metadata() const;
+
+	RigidBodyKinematicCollision();
+};
 
 class KinematicCollision;
 

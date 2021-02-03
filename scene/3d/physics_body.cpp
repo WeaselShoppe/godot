@@ -1092,6 +1092,99 @@ void RigidBody::_reload_physics_characteristics() {
 	}
 }
 
+///////////////////////////////////////////////////////
+Vector3 RigidBodyKinematicCollision::get_position() const {
+
+	return collision.collision;
+}
+Vector3 RigidBodyKinematicCollision::get_normal() const {
+	return collision.normal;
+}
+Vector3 RigidBodyKinematicCollision::get_travel() const {
+	return collision.travel;
+}
+Vector3 RigidBodyKinematicCollision::get_remainder() const {
+	return collision.remainder;
+}
+Object *RigidBodyKinematicCollision::get_local_shape() const {
+	if (!owner) return NULL;
+	uint32_t ownerid = owner->shape_find_owner(collision.local_shape);
+	return owner->shape_owner_get_owner(ownerid);
+}
+
+Object *RigidBodyKinematicCollision::get_collider() const {
+
+	if (collision.collider) {
+		return ObjectDB::get_instance(collision.collider);
+	}
+
+	return NULL;
+}
+ObjectID RigidBodyKinematicCollision::get_collider_id() const {
+
+	return collision.collider;
+}
+Object *RigidBodyKinematicCollision::get_collider_shape() const {
+
+	Object *collider = get_collider();
+	if (collider) {
+		CollisionObject *obj2d = Object::cast_to<CollisionObject>(collider);
+		if (obj2d) {
+			uint32_t ownerid = obj2d->shape_find_owner(collision.collider_shape);
+			return obj2d->shape_owner_get_owner(ownerid);
+		}
+	}
+
+	return NULL;
+}
+int RigidBodyKinematicCollision::get_collider_shape_index() const {
+
+	return collision.collider_shape;
+}
+Vector3 RigidBodyKinematicCollision::get_collider_velocity() const {
+
+	return collision.collider_vel;
+}
+Variant RigidBodyKinematicCollision::get_collider_metadata() const {
+
+	return Variant();
+}
+
+void RigidBodyKinematicCollision::_bind_methods() {
+
+	ClassDB::bind_method(D_METHOD("get_position"), &RigidBodyKinematicCollision::get_position);
+	ClassDB::bind_method(D_METHOD("get_normal"), &RigidBodyKinematicCollision::get_normal);
+	ClassDB::bind_method(D_METHOD("get_travel"), &RigidBodyKinematicCollision::get_travel);
+	ClassDB::bind_method(D_METHOD("get_remainder"), &RigidBodyKinematicCollision::get_remainder);
+	ClassDB::bind_method(D_METHOD("get_local_shape"), &RigidBodyKinematicCollision::get_local_shape);
+	ClassDB::bind_method(D_METHOD("get_collider"), &RigidBodyKinematicCollision::get_collider);
+	ClassDB::bind_method(D_METHOD("get_collider_id"), &RigidBodyKinematicCollision::get_collider_id);
+	ClassDB::bind_method(D_METHOD("get_collider_shape"), &RigidBodyKinematicCollision::get_collider_shape);
+	ClassDB::bind_method(D_METHOD("get_collider_shape_index"), &RigidBodyKinematicCollision::get_collider_shape_index);
+	ClassDB::bind_method(D_METHOD("get_collider_velocity"), &RigidBodyKinematicCollision::get_collider_velocity);
+	ClassDB::bind_method(D_METHOD("get_collider_metadata"), &RigidBodyKinematicCollision::get_collider_metadata);
+
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "position"), "", "get_position");
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "normal"), "", "get_normal");
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "travel"), "", "get_travel");
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "remainder"), "", "get_remainder");
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "local_shape"), "", "get_local_shape");
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "collider"), "", "get_collider");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "collider_id"), "", "get_collider_id");
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "collider_shape"), "", "get_collider_shape");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "collider_shape_index"), "", "get_collider_shape_index");
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "collider_velocity"), "", "get_collider_velocity");
+	ADD_PROPERTY(PropertyInfo(Variant::NIL, "collider_metadata", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NIL_IS_VARIANT), "", "get_collider_metadata");
+}
+
+RigidBodyKinematicCollision::RigidBodyKinematicCollision() {
+	collision.collider = 0;
+	collision.collider_shape = 0;
+	collision.local_shape = 0;
+	owner = NULL;
+}
+//////////////////////////////////////////////////////////////////
+
 //////////////////////////////////////////////////////
 //////////////////////////
 

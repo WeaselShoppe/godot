@@ -436,6 +436,7 @@ void register_scene_types() {
 	ClassDB::register_virtual_class<CollisionObject>();
 	ClassDB::register_virtual_class<PhysicsBody>();
 	ClassDB::register_class<StaticBody>();
+	ClassDB::register_class<RigidBodyKinematicCollision>();
 	ClassDB::register_class<RigidBody>();
 	ClassDB::register_class<KinematicCollision>();
 	ClassDB::register_class<KinematicBody>();
