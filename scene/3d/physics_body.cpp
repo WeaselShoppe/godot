@@ -339,7 +339,7 @@ Ref<RigidBodyKinematicCollision> RigidBody::_move(const Vector3 &p_motion, bool 
 		return motion_cache;
 	}
 
-	return Ref<KinematicCollision>();
+	return Ref<RigidBodyKinematicCollision>();
 }
 
 bool RigidBody::move_and_collide(const Vector3 &p_motion, bool p_infinite_inertia, Collision &r_collision, bool p_exclude_raycast_shapes, bool p_test_only) {
