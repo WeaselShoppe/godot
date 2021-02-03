@@ -113,6 +113,8 @@ private:
 	void _reload_physics_characteristics();
 };
 
+class RigidBodyKinematicCollision;
+
 class RigidBody : public PhysicsBody {
 
 	GDCLASS(RigidBody, PhysicsBody);
@@ -137,6 +139,9 @@ public:
 		Vector3 travel;
 		int local_shape;
 	};
+
+private:
+	Ref<RigidBodyKinematicCollision> motion_cache;
 
 protected:
 	bool can_sleep;
@@ -272,6 +277,10 @@ public:
 
 	Array get_colliding_bodies() const;
 
+//BEGIN KINEMATIC METHODS
+	bool move_and_collide(const Vector3 &p_motion, bool p_infinite_inertia, Collision &r_collision, bool p_exclude_raycast_shapes, bool p_test_only);
+//END KINEMATIC METHODS
+
 	void add_central_force(const Vector3 &p_force);
 	void add_force(const Vector3 &p_force, const Vector3 &p_pos);
 	void add_torque(const Vector3 &p_torque);
@@ -286,6 +295,9 @@ public:
 	~RigidBody();
 
 private:
+//BEGIN KINEMATIC METHODS
+	Ref<RigidBodyKinematicCollision> _move(const Vector3 &p_motion, bool p_infinite_inertia = true, bool p_exclude_raycast_shapes = true, bool p_test_only = false);
+//END KINEMATIC METHODS
 	void _reload_physics_characteristics();
 };
 

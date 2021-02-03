@@ -325,6 +325,57 @@ void StaticBody::_reload_physics_characteristics() {
 	}
 }
 
+Ref<RigidBodyKinematicCollision> RigidBody::_move(const Vector3 &p_motion, bool p_infinite_inertia, bool p_exclude_raycast_shapes, bool p_test_only) {
+//TODO: ERROR CHECKING FOR MODE
+	Collision col;
+	if (move_and_collide(p_motion, p_infinite_inertia, col, p_exclude_raycast_shapes, p_test_only)) {
+		if (motion_cache.is_null()) {
+			motion_cache.instance();
+			motion_cache->owner = this;
+		}
+
+		motion_cache->collision = col;
+
+		return motion_cache;
+	}
+
+	return Ref<KinematicCollision>();
+}
+
+bool RigidBody::move_and_collide(const Vector3 &p_motion, bool p_infinite_inertia, Collision &r_collision, bool p_exclude_raycast_shapes, bool p_test_only) {
+//TODO: ERROR CHECKING FOR MODE
+
+	Transform gt = get_global_transform();
+	PhysicsServer::MotionResult result;
+	bool colliding = PhysicsServer::get_singleton()->body_test_motion(get_rid(), gt, p_motion, p_infinite_inertia, &result, p_exclude_raycast_shapes);
+
+	if (colliding) {
+		r_collision.collider_metadata = result.collider_metadata;
+		r_collision.collider_shape = result.collider_shape;
+		r_collision.collider_vel = result.collider_velocity;
+		r_collision.collision = result.collision_point;
+		r_collision.normal = result.collision_normal;
+		r_collision.collider = result.collider_id;
+		r_collision.collider_rid = result.collider;
+		r_collision.travel = result.motion;
+		r_collision.remainder = result.remainder;
+		r_collision.local_shape = result.collision_local_shape;
+	}
+
+	for (int i = 0; i < 3; i++) {
+		if(get_axis_lock((PhysicsServer::BodyAxis)(1 << i))){
+			result.motion[i] = 0;
+		}
+	}
+
+	if (!p_test_only) {
+		gt.origin += result.motion;
+		set_global_transform(gt);
+	}
+
+	return colliding;
+}
+
 void RigidBody::_body_enter_tree(ObjectID p_id) {
 
 	Object *obj = ObjectDB::get_instance(p_id);
@@ -986,6 +1037,8 @@ void RigidBody::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_axis_velocity", "axis_velocity"), &RigidBody::set_axis_velocity);
 
+	ClassDB::bind_method(D_METHOD("move_and_collide", "rel_vec", "infinite_inertia", "exclude_raycast_shapes", "test_only"), &RigidBody::_move, DEFVAL(true), DEFVAL(true), DEFVAL(false));
+
 	ClassDB::bind_method(D_METHOD("add_central_force", "force"), &RigidBody::add_central_force);
 	ClassDB::bind_method(D_METHOD("add_force", "force", "position"), &RigidBody::add_force);
 	ClassDB::bind_method(D_METHOD("add_torque", "torque"), &RigidBody::add_torque);
@@ -1077,6 +1130,9 @@ RigidBody::RigidBody() :
 }
 
 RigidBody::~RigidBody() {
+	if (motion_cache.is_valid()) {
+		motion_cache->owner = NULL;
+	}
 
 	if (contact_monitor)
 		memdelete(contact_monitor);
