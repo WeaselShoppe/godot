@@ -325,8 +325,9 @@ void StaticBody::_reload_physics_characteristics() {
 	}
 }
 
+//KINEMATIC
 Ref<RigidBodyKinematicCollision> RigidBody::_move(const Vector3 &p_motion, bool p_infinite_inertia, bool p_exclude_raycast_shapes, bool p_test_only) {
-	ERR_FAIL_COND_V_MSG(mode != MODE_KINEMATIC, Ref<RigidBodyKinematicCollision>(), "Rigid body must be in kinematic mode to use move_and_collide().");
+	ERR_FAIL_COND_V_MSG(mode != MODE_KINEMATIC, Ref<RigidBodyKinematicCollision>(), "Rigid body must be in kinematic mode!");
 	Collision col;
 	if (move_and_collide(p_motion, p_infinite_inertia, col, p_exclude_raycast_shapes, p_test_only)) {
 		if (motion_cache.is_null()) {
@@ -343,7 +344,7 @@ Ref<RigidBodyKinematicCollision> RigidBody::_move(const Vector3 &p_motion, bool 
 }
 
 bool RigidBody::move_and_collide(const Vector3 &p_motion, bool p_infinite_inertia, Collision &r_collision, bool p_exclude_raycast_shapes, bool p_test_only) {
-	ERR_FAIL_COND_V_MSG(mode != MODE_KINEMATIC, false, "Rigid body must be in kinematic mode to use move_and_collide().");
+	ERR_FAIL_COND_V_MSG(mode != MODE_KINEMATIC, false, "Rigid body must be in kinematic mode!");
 
 	Transform gt = get_global_transform();
 	PhysicsServer::MotionResult result;
@@ -379,8 +380,8 @@ bool RigidBody::move_and_collide(const Vector3 &p_motion, bool p_infinite_inerti
 //so, if you pass 45 as limit, avoid numerical precision errors when angle is 45.
 #define FLOOR_ANGLE_THRESHOLD 0.01
 
-//KINEMATIC
 bool RigidBody::separate_raycast_shapes(bool p_infinite_inertia, Collision &r_collision) {
+
 	PhysicsServer::SeparationResult sep_res[8]; //max 8 rays
 
 	Transform gt = get_global_transform();
@@ -418,6 +419,7 @@ bool RigidBody::separate_raycast_shapes(bool p_infinite_inertia, Collision &r_co
 }
 
 Vector3 RigidBody::move_and_slide(const Vector3 &p_linear_velocity, const Vector3 &p_up_direction, bool p_stop_on_slope, int p_max_slides, float p_floor_max_angle, bool p_infinite_inertia) {
+	ERR_FAIL_COND_V_MSG(mode != MODE_KINEMATIC, p_linear_velocity, "Rigid body must be in kinematic mode!");
 
 	Vector3 body_velocity = p_linear_velocity;
 	Vector3 body_velocity_normal = body_velocity.normalized();
@@ -541,6 +543,8 @@ Vector3 RigidBody::get_floor_velocity() const {
 }
 
 void RigidBody::set_safe_margin(float p_margin) {
+	//TODO this check may not be needed here
+	ERR_FAIL_COND_MSG(mode != MODE_KINEMATIC, "Rigid body must be in kinematic mode!");
 
 	margin = p_margin;
 	PhysicsServer::get_singleton()->body_set_kinematic_safe_margin(get_rid(), margin);
@@ -562,7 +566,7 @@ RigidBody::Collision RigidBody::get_slide_collision(int p_bounce) const {
 }
 
 Ref<RigidBodyKinematicCollision> RigidBody::_get_slide_collision(int p_bounce) {
-
+	ERR_FAIL_COND_V_MSG(mode != MODE_KINEMATIC, Ref<RigidBodyKinematicCollision>(), "Rigid body must be in kinematic mode!");
 	ERR_FAIL_INDEX_V(p_bounce, colliders.size(), Ref<RigidBodyKinematicCollision>());
 	if (p_bounce >= slide_colliders.size()) {
 		slide_colliders.resize(p_bounce + 1);
