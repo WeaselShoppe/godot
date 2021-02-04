@@ -326,7 +326,7 @@ void StaticBody::_reload_physics_characteristics() {
 }
 
 Ref<RigidBodyKinematicCollision> RigidBody::_move(const Vector3 &p_motion, bool p_infinite_inertia, bool p_exclude_raycast_shapes, bool p_test_only) {
-//TODO: ERROR CHECKING FOR MODE
+	ERR_FAIL_COND_V_MSG(mode != MODE_KINEMATIC, Ref<RigidBodyKinematicCollision>(), "Rigid body must be in kinematic mode to use move_and_collide().");
 	Collision col;
 	if (move_and_collide(p_motion, p_infinite_inertia, col, p_exclude_raycast_shapes, p_test_only)) {
 		if (motion_cache.is_null()) {
@@ -343,7 +343,7 @@ Ref<RigidBodyKinematicCollision> RigidBody::_move(const Vector3 &p_motion, bool 
 }
 
 bool RigidBody::move_and_collide(const Vector3 &p_motion, bool p_infinite_inertia, Collision &r_collision, bool p_exclude_raycast_shapes, bool p_test_only) {
-//TODO: ERROR CHECKING FOR MODE
+	ERR_FAIL_COND_V_MSG(mode != MODE_KINEMATIC, false, "Rigid body must be in kinematic mode to use move_and_collide().");
 
 	Transform gt = get_global_transform();
 	PhysicsServer::MotionResult result;
