@@ -141,7 +141,18 @@ public:
 	};
 
 private:
+// KINEMATIC
+	float margin;
+	Vector3 floor_normal;
+	Vector3 floor_velocity;
+	RID on_floor_body;
+	bool on_floor;
+	bool on_ceiling;
+	bool on_wall;
+	Vector<Collision> colliders;
+	Vector<Ref<RigidBodyKinematicCollision> > slide_colliders;
 	Ref<RigidBodyKinematicCollision> motion_cache;
+// KINEMATIC
 
 protected:
 	bool can_sleep;
@@ -278,7 +289,20 @@ public:
 	Array get_colliding_bodies() const;
 
 //BEGIN KINEMATIC METHODS
-	bool move_and_collide(const Vector3 &p_motion, bool p_infinite_inertia, Collision &r_collision, bool p_exclude_raycast_shapes, bool p_test_only);
+	void set_safe_margin(float p_margin);
+	float get_safe_margin() const;
+
+	bool separate_raycast_shapes(bool p_infinite_inertia, Collision &r_collision);
+	bool move_and_collide(const Vector3 &p_motion, bool p_infinite_inertia, Collision &r_collision, bool p_exclude_raycast_shapes = true, bool p_test_only = false);
+	Vector3 move_and_slide(const Vector3 &p_linear_velocity, const Vector3 &p_up_direction = Vector3(0, 0, 0), bool p_stop_on_slope = false, int p_max_slides = 4, float p_floor_max_angle = Math::deg2rad((float)45), bool p_infinite_inertia = true);
+	bool is_on_floor() const;
+	bool is_on_wall() const;
+	bool is_on_ceiling() const;
+	Vector3 get_floor_normal() const;
+	Vector3 get_floor_velocity() const;
+
+	int get_slide_count() const;
+	Collision get_slide_collision(int p_bounce) const;
 //END KINEMATIC METHODS
 
 	void add_central_force(const Vector3 &p_force);
@@ -295,9 +319,10 @@ public:
 	~RigidBody();
 
 private:
-//BEGIN KINEMATIC METHODS
+//KINEMATIC
 	Ref<RigidBodyKinematicCollision> _move(const Vector3 &p_motion, bool p_infinite_inertia = true, bool p_exclude_raycast_shapes = true, bool p_test_only = false);
-//END KINEMATIC METHODS
+	Ref<RigidBodyKinematicCollision> _get_slide_collision(int p_bounce);
+//KINEMATIC
 	void _reload_physics_characteristics();
 };
 

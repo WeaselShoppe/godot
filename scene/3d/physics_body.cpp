@@ -376,6 +376,208 @@ bool RigidBody::move_and_collide(const Vector3 &p_motion, bool p_infinite_inerti
 	return colliding;
 }
 
+//so, if you pass 45 as limit, avoid numerical precision errors when angle is 45.
+#define FLOOR_ANGLE_THRESHOLD 0.01
+
+//KINEMATIC
+bool RigidBody::separate_raycast_shapes(bool p_infinite_inertia, Collision &r_collision) {
+	PhysicsServer::SeparationResult sep_res[8]; //max 8 rays
+
+	Transform gt = get_global_transform();
+
+	Vector3 recover;
+	int hits = PhysicsServer::get_singleton()->body_test_ray_separation(get_rid(), gt, p_infinite_inertia, recover, sep_res, 8, margin);
+	int deepest = -1;
+	float deepest_depth;
+	for (int i = 0; i < hits; i++) {
+		if (deepest == -1 || sep_res[i].collision_depth > deepest_depth) {
+			deepest = i;
+			deepest_depth = sep_res[i].collision_depth;
+		}
+	}
+
+	gt.origin += recover;
+	set_global_transform(gt);
+
+	if (deepest != -1) {
+		r_collision.collider = sep_res[deepest].collider_id;
+		r_collision.collider_metadata = sep_res[deepest].collider_metadata;
+		r_collision.collider_shape = sep_res[deepest].collider_shape;
+		r_collision.collider_vel = sep_res[deepest].collider_velocity;
+		r_collision.collision = sep_res[deepest].collision_point;
+		r_collision.normal = sep_res[deepest].collision_normal;
+		r_collision.local_shape = sep_res[deepest].collision_local_shape;
+		r_collision.travel = recover;
+		r_collision.remainder = Vector3();
+
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+Vector3 RigidBody::move_and_slide(const Vector3 &p_linear_velocity, const Vector3 &p_up_direction, bool p_stop_on_slope, int p_max_slides, float p_floor_max_angle, bool p_infinite_inertia) {
+
+	Vector3 body_velocity = p_linear_velocity;
+	Vector3 body_velocity_normal = body_velocity.normalized();
+	Vector3 up_direction = p_up_direction.normalized();
+
+	for (int i = 0; i < 3; i++) {
+		if (get_axis_lock((PhysicsServer::BodyAxis)(1 << i))) {
+			body_velocity[i] = 0;
+		}
+	}
+
+	// Hack in order to work with calling from _process as well as from _physics_process; calling from thread is risky
+	Vector3 motion = (floor_velocity + body_velocity) * (Engine::get_singleton()->is_in_physics_frame() ? get_physics_process_delta_time() : get_process_delta_time());
+
+	on_floor = false;
+	on_floor_body = RID();
+	on_ceiling = false;
+	on_wall = false;
+	colliders.clear();
+	floor_normal = Vector3();
+	floor_velocity = Vector3();
+
+	while (p_max_slides) {
+
+		Collision collision;
+		bool found_collision = false;
+
+		for (int i = 0; i < 2; ++i) {
+			bool collided;
+			if (i == 0) { //collide
+				collided = move_and_collide(motion, p_infinite_inertia, collision);
+				if (!collided) {
+					motion = Vector3(); //clear because no collision happened and motion completed
+				}
+			}
+			else { //separate raycasts (if any)
+				collided = separate_raycast_shapes(p_infinite_inertia, collision);
+				if (collided) {
+					collision.remainder = motion; //keep
+					collision.travel = Vector3();
+				}
+			}
+
+			if (collided) {
+				found_collision = true;
+
+				colliders.push_back(collision);
+				motion = collision.remainder;
+
+				if (up_direction == Vector3()) {
+					//all is a wall
+					on_wall = true;
+				}
+				else {
+					if (Math::acos(collision.normal.dot(up_direction)) <= p_floor_max_angle + FLOOR_ANGLE_THRESHOLD) { //floor
+
+						on_floor = true;
+						floor_normal = collision.normal;
+						on_floor_body = collision.collider_rid;
+						floor_velocity = collision.collider_vel;
+
+						if (p_stop_on_slope) {
+							if ((body_velocity_normal + up_direction).length() < 0.01 && collision.travel.length() < 1) {
+								Transform gt = get_global_transform();
+								gt.origin -= collision.travel.slide(up_direction);
+								set_global_transform(gt);
+								return Vector3();
+							}
+						}
+					}
+					else if (Math::acos(collision.normal.dot(-up_direction)) <= p_floor_max_angle + FLOOR_ANGLE_THRESHOLD) { //ceiling
+						on_ceiling = true;
+					}
+					else {
+						on_wall = true;
+					}
+				}
+
+				motion = motion.slide(collision.normal);
+				body_velocity = body_velocity.slide(collision.normal);
+
+				for (int j = 0; j < 3; j++) {
+					if (get_axis_lock((PhysicsServer::BodyAxis)(1 << j))) {
+						body_velocity[j] = 0;
+					}
+				}
+			}
+		}
+
+		if (!found_collision || motion == Vector3())
+			break;
+
+		--p_max_slides;
+	}
+
+	return body_velocity;
+}
+
+bool RigidBody::is_on_floor() const {
+
+	return on_floor;
+}
+
+bool RigidBody::is_on_wall() const {
+
+	return on_wall;
+}
+bool RigidBody::is_on_ceiling() const {
+
+	return on_ceiling;
+}
+
+Vector3 RigidBody::get_floor_normal() const {
+
+	return floor_normal;
+}
+
+Vector3 RigidBody::get_floor_velocity() const {
+
+	return floor_velocity;
+}
+
+void RigidBody::set_safe_margin(float p_margin) {
+
+	margin = p_margin;
+	PhysicsServer::get_singleton()->body_set_kinematic_safe_margin(get_rid(), margin);
+}
+
+float RigidBody::get_safe_margin() const {
+
+	return margin;
+}
+
+int RigidBody::get_slide_count() const {
+
+	return colliders.size();
+}
+
+RigidBody::Collision RigidBody::get_slide_collision(int p_bounce) const {
+	ERR_FAIL_INDEX_V(p_bounce, colliders.size(), Collision());
+	return colliders[p_bounce];
+}
+
+Ref<RigidBodyKinematicCollision> RigidBody::_get_slide_collision(int p_bounce) {
+
+	ERR_FAIL_INDEX_V(p_bounce, colliders.size(), Ref<RigidBodyKinematicCollision>());
+	if (p_bounce >= slide_colliders.size()) {
+		slide_colliders.resize(p_bounce + 1);
+	}
+
+	if (slide_colliders[p_bounce].is_null()) {
+		slide_colliders.write[p_bounce].instance();
+		slide_colliders.write[p_bounce]->owner = this;
+	}
+
+	slide_colliders.write[p_bounce]->collision = colliders[p_bounce];
+	return slide_colliders[p_bounce];
+}
+//KINEMATIC
+
 void RigidBody::_body_enter_tree(ObjectID p_id) {
 
 	Object *obj = ObjectDB::get_instance(p_id);
@@ -1037,7 +1239,19 @@ void RigidBody::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_axis_velocity", "axis_velocity"), &RigidBody::set_axis_velocity);
 
+//KINEMATIC
+	ClassDB::bind_method(D_METHOD("is_on_floor"), &RigidBody::is_on_floor);
+	ClassDB::bind_method(D_METHOD("is_on_ceiling"), &RigidBody::is_on_ceiling);
+	ClassDB::bind_method(D_METHOD("is_on_wall"), &RigidBody::is_on_wall);
+	ClassDB::bind_method(D_METHOD("get_floor_normal"), &RigidBody::get_floor_normal);
+	ClassDB::bind_method(D_METHOD("get_floor_velocity"), &RigidBody::get_floor_velocity);
+	ClassDB::bind_method(D_METHOD("set_safe_margin", "pixels"), &RigidBody::set_safe_margin);
+	ClassDB::bind_method(D_METHOD("get_safe_margin"), &RigidBody::get_safe_margin);
+	ClassDB::bind_method(D_METHOD("get_slide_count"), &RigidBody::get_slide_count);
+	ClassDB::bind_method(D_METHOD("get_slide_collision", "slide_idx"), &RigidBody::_get_slide_collision);
 	ClassDB::bind_method(D_METHOD("move_and_collide", "rel_vec", "infinite_inertia", "exclude_raycast_shapes", "test_only"), &RigidBody::_move, DEFVAL(true), DEFVAL(true), DEFVAL(false));
+	ClassDB::bind_method(D_METHOD("move_and_slide", "linear_velocity", "up_direction", "stop_on_slope", "max_slides", "floor_max_angle", "infinite_inertia"), &RigidBody::move_and_slide, DEFVAL(Vector3(0, 0, 0)), DEFVAL(false), DEFVAL(4), DEFVAL(Math::deg2rad((float)45)), DEFVAL(true));
+//KINEMATIC
 
 	ClassDB::bind_method(D_METHOD("add_central_force", "force"), &RigidBody::add_central_force);
 	ClassDB::bind_method(D_METHOD("add_force", "force", "position"), &RigidBody::add_force);
@@ -1126,12 +1340,25 @@ RigidBody::RigidBody() :
 	contact_monitor = NULL;
 	can_sleep = true;
 
+// KINEMATIC
+	on_floor = false;
+	on_ceiling = false;
+	on_wall = false;
+	set_safe_margin(0.001);
+// KINEMATIC
+
 	PhysicsServer::get_singleton()->body_set_force_integration_callback(get_rid(), this, "_direct_state_changed");
 }
 
 RigidBody::~RigidBody() {
 	if (motion_cache.is_valid()) {
 		motion_cache->owner = NULL;
+	}
+
+	for (int i = 0; i < slide_colliders.size(); i++) {
+		if (slide_colliders[i].is_valid()) {
+			slide_colliders.write[i]->owner = NULL;
+		}
 	}
 
 	if (contact_monitor)
@@ -1293,9 +1520,6 @@ bool KinematicBody::move_and_collide(const Vector3 &p_motion, bool p_infinite_in
 
 	return colliding;
 }
-
-//so, if you pass 45 as limit, avoid numerical precision errors when angle is 45.
-#define FLOOR_ANGLE_THRESHOLD 0.01
 
 Vector3 KinematicBody::move_and_slide(const Vector3 &p_linear_velocity, const Vector3 &p_up_direction, bool p_stop_on_slope, int p_max_slides, float p_floor_max_angle, bool p_infinite_inertia) {
 
